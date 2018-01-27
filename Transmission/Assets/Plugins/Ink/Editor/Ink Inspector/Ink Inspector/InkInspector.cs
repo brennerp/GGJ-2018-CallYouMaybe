@@ -2,8 +2,12 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using Ink.Runtime;
 using UnityEditorInternal;
+using System.Text.RegularExpressions;
 using Object = UnityEngine.Object;
 
 namespace Ink.UnityIntegration {
@@ -79,11 +83,9 @@ namespace Ink.UnityIntegration {
 			if(inkFile == null) 
 				return;
 
-			if (inkFile.jsonAsset != null && inkFile.metaInfo.includes.Count > 0)
-				CreateIncludeList ();
-			else
-				includesFileList = null;
-
+			if(inkFile.metaInfo.includes.Count > 0) {
+				CreateIncludeList();
+			}
 			CreateErrorList();
 			CreateWarningList();
 			CreateTodoList();

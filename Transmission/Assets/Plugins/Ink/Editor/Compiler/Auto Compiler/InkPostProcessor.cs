@@ -1,10 +1,15 @@
 ﻿// Automatically creates JSON files from an ink placed within the Assets/Ink folder.
 using UnityEngine;
 using UnityEditor;
+using System;
 using System.IO;
 using Debug = UnityEngine.Debug;
+using System.Collections;
 using System.Collections.Generic;
+
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Ink.UnityIntegration {
 	class InkPostProcessor : AssetPostprocessor {
@@ -141,15 +146,8 @@ namespace Ink.UnityIntegration {
 					importedInkAssets.Add(importedAssetPath);
 				else if (Path.GetFileName(importedAssetPath) == "inklecate" && Path.GetExtension(importedAssetPath) == "")
 					inklecateFileLocation = importedAssetPath;
-				else if (Path.GetExtension(importedAssetPath) == ".asset") {
-					var obj = AssetDatabase.LoadAssetAtPath<ScriptableObject>(importedAssetPath);
-					if(obj is InkSettings) {
-						InkEditorUtils.DeleteAllButOldestScriptableObjects(AssetDatabase.FindAssets("t:"+typeof(InkSettings).Name), typeof(InkSettings).Name);
-					} else if(obj is InkLibrary) {
-						InkEditorUtils.DeleteAllButOldestScriptableObjects(AssetDatabase.FindAssets("t:"+typeof(InkLibrary).Name), typeof(InkLibrary).Name);
-					}
-				}
 			}
+
 			if(importedInkAssets.Count > 0)
 				PostprocessInkFiles(importedInkAssets);
 			if(inklecateFileLocation != null)
@@ -158,20 +156,44 @@ namespace Ink.UnityIntegration {
 
 		private static void PostprocessInklecate (string inklecateFileLocation) {
 			Debug.Log("Inklecate updated. Recompiling all Ink files...");
-			InkEditorUtils.RecompileAll();
+			InkCompiler.RecompileAll();
 		}
 
 		private static void PostprocessInkFiles (List<string> importedInkAssets) {
-			if(EditorApplication.isPlaying && InkSettings.Instance.delayInPlayMode) {
-				foreach(var fileToImport in importedInkAssets) {
-					if(!InkLibrary.Instance.pendingCompilationStack.Contains(fileToImport))
-						InkLibrary.Instance.pendingCompilationStack.Add(fileToImport);
-				}
-			} else {
-				foreach (var inkAssetToCompile in InkCompiler.GetUniqueMasterInkFilesToCompile (importedInkAssets))
-					InkCompiler.CompileInk(inkAssetToCompile);
-				InkLibrary.CreateOrReadUpdatedInkFiles (importedInkAssets);
+//			foreach (var importedAssetPath in importedInkAssets) {
+//				Debug.Log("Imported Ink: "+importedAssetPath);
+//			}
+			CreateOrReadUpdatedInkFiles (importedInkAssets);
+			foreach (var inkAssetToCompile in GetUniqueMasterInkFilesToCompile (importedInkAssets)) {
+				InkCompiler.CompileInk(inkAssetToCompile);
 			}
+		}
+
+		private static void CreateOrReadUpdatedInkFiles (List<string> importedInkAssets) {
+			foreach (var importedAssetPath in importedInkAssets) {
+				InkFile inkFile = InkLibrary.GetInkFileWithPath(importedAssetPath);
+				if(inkFile == null) {
+					DefaultAsset asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(importedAssetPath);
+					inkFile = new InkFile(asset);
+					InkLibrary.Instance.inkLibrary.Add(inkFile);
+					InkMetaLibrary.Instance.metaLibrary.Add(new InkMetaFile(inkFile));
+				} else {
+					inkFile.metaInfo.ParseContent();
+				}
+			}
+			// Now we've updated all the include paths for the ink library we can create master/child references between them.
+			InkMetaLibrary.RebuildInkFileConnections();
+		}
+
+		private static List<InkFile> GetUniqueMasterInkFilesToCompile (List<string> importedInkAssets) {
+			List<InkFile> masterInkFiles = new List<InkFile>();
+			foreach (var importedAssetPath in importedInkAssets) {
+				InkFile inkFile = InkLibrary.GetInkFileWithPath(importedAssetPath);
+				if(!masterInkFiles.Contains(inkFile.metaInfo.masterInkFileIncludingSelf) && (InkSettings.Instance.compileAutomatically || inkFile.metaInfo.masterInkFileIncludingSelf.compileAutomatically)) {
+					masterInkFiles.Add(inkFile.metaInfo.masterInkFileIncludingSelf);
+				}
+			}
+			return masterInkFiles;
 		}
 	}
 }

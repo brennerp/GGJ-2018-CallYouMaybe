@@ -119,15 +119,15 @@ namespace Ink.Runtime
         Path internalPathToFirstLeafContent
         {
             get {
-				var components = new List<Path.Component>();
+                var path = new Path ();
                 var container = this;
                 while (container != null) {
                     if (container.content.Count > 0) {
-                        components.Add (new Path.Component (0));
+                        path.components.Add (new Path.Component (0));
                         container = container.content [0] as Container;
                     }
                 }
-				return new Path(components);
+                return path;
             }
         }
 
@@ -229,13 +229,13 @@ namespace Ink.Runtime
         public Runtime.Object ContentAtPath(Path path, int partialPathLength = -1)
 		{
             if (partialPathLength == -1)
-                partialPathLength = path.componentCount;
+                partialPathLength = path.components.Count;
             
             Container currentContainer = this;
             Runtime.Object currentObj = this;
 
             for (int i = 0; i < partialPathLength; ++i) {
-				var comp = path.GetComponent(i);
+                var comp = path.components [i];
                 if (currentContainer == null)
                     throw new System.Exception ("Path continued, but previous object wasn't a container: " + currentObj);
                 currentObj = currentContainer.ContentWithPathComponent(comp);

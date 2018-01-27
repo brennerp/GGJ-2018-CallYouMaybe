@@ -77,16 +77,7 @@ namespace Ink.Runtime
             }
 		}
 
-		public int componentCount {
-			get {
-				return _components.Count;
-			}
-		}
-
-		public Component GetComponent(int index)
-		{
-			return _components[index];
-		}
+		public List<Component> components { get; private set; }
 
         public bool isRelative { get; private set; }
 
@@ -94,8 +85,8 @@ namespace Ink.Runtime
 		{ 
 			get 
 			{ 
-				if (_components.Count > 0) {
-					return _components.First ();
+				if (components.Count > 0) {
+					return components.First ();
 				} else {
 					return null;
 				}
@@ -106,8 +97,8 @@ namespace Ink.Runtime
 		{ 
 			get 
 			{
-				if (_components.Count >= 2) {
-					List<Component> tailComps = _components.GetRange (1, _components.Count - 1);
+				if (components.Count >= 2) {
+					List<Component> tailComps = components.GetRange (1, components.Count - 1);
 					return new Path(tailComps);
 				} 
 
@@ -118,23 +109,23 @@ namespace Ink.Runtime
 			}
 		}
             
-		public int length { get { return _components.Count; } }
+		public int length { get { return components.Count; } }
 
 		public Component lastComponent 
 		{ 
 			get 
 			{ 
-				var lastComponentIdx = _components.Count-1;
-				if( lastComponentIdx >= 0 )
-					return _components[lastComponentIdx];
-				else
+				if (components.Count > 0) {
+					return components.Last ();
+				} else {
 					return null;
+				}
 			} 
 		}
 
         public bool containsNamedComponent {
             get {
-                foreach(var comp in _components) {
+                foreach(var comp in components) {
                     if( !comp.isIndex ) {
                         return true;
                     }
@@ -145,18 +136,18 @@ namespace Ink.Runtime
 
 		public Path()
 		{
-			_components = new List<Component> ();
+			components = new List<Component> ();
 		}
 
 		public Path(Component head, Path tail) : this()
 		{
-			_components.Add (head);
-			_components.AddRange (tail._components);
+			components.Add (head);
+			components.AddRange (tail.components);
 		}
 
 		public Path(IEnumerable<Component> components, bool relative = false) : this()
 		{
-			this._components.AddRange (components);
+			this.components.AddRange (components);
             this.isRelative = relative;
 		}
 
@@ -178,20 +169,20 @@ namespace Ink.Runtime
             Path p = new Path ();
 
             int upwardMoves = 0;
-            for (int i = 0; i < pathToAppend._components.Count; ++i) {
-                if (pathToAppend._components [i].isParent) {
+            for (int i = 0; i < pathToAppend.components.Count; ++i) {
+                if (pathToAppend.components [i].isParent) {
                     upwardMoves++;
                 } else {
                     break;
                 }
             }
 
-            for (int i = 0; i < this._components.Count - upwardMoves; ++i) {
-                p._components.Add (this._components [i]);
+            for (int i = 0; i < this.components.Count - upwardMoves; ++i) {
+                p.components.Add (this.components [i]);
             }
 
-            for(int i=upwardMoves; i<pathToAppend._components.Count; ++i) {
-                p._components.Add (pathToAppend._components [i]);
+            for(int i=upwardMoves; i<pathToAppend.components.Count; ++i) {
+                p.components.Add (pathToAppend.components [i]);
             }
 
 			return p;
@@ -199,45 +190,44 @@ namespace Ink.Runtime
 
         public string componentsString {
             get {
-				if( _componentsString == null ) {
-					_componentsString = StringExt.Join (".", _components);
-					if (isRelative) _componentsString = "." + _componentsString;
-				}
-				return _componentsString;
+                var compsStr = StringExt.Join (".", components);
+                if (isRelative)
+                    return "." + compsStr;
+                else
+                    return compsStr;
             }
             private set {
-                _components.Clear ();
+                components.Clear ();
 
-				_componentsString = value;
+                var componentsStr = value;
 
                 // Empty path, empty components
                 // (path is to root, like "/" in file system)
-                if (string.IsNullOrEmpty(_componentsString))
+                if (string.IsNullOrEmpty(componentsStr))
                     return;
 
                 // When components start with ".", it indicates a relative path, e.g.
                 //   .^.^.hello.5
                 // is equivalent to file system style path:
                 //  ../../hello/5
-                if (_componentsString [0] == '.') {
+                if (componentsStr [0] == '.') {
                     this.isRelative = true;
-                    _componentsString = _componentsString.Substring (1);
+                    componentsStr = componentsStr.Substring (1);
                 } else {
                     this.isRelative = false;
                 }
 
-                var componentStrings = _componentsString.Split('.');
+                var componentStrings = componentsStr.Split('.');
                 foreach (var str in componentStrings) {
                     int index;
                     if (int.TryParse (str , out index)) {
-                        _components.Add (new Component (index));
+                        components.Add (new Component (index));
                     } else {
-                        _components.Add (new Component (str));
+                        components.Add (new Component (str));
                     }
                 }
             }
         }
-		string _componentsString;
 
 		public override string ToString()
 		{
@@ -254,13 +244,13 @@ namespace Ink.Runtime
             if (otherPath == null)
                 return false;
 
-            if (otherPath._components.Count != this._components.Count)
+            if (otherPath.components.Count != this.components.Count)
                 return false;
 
             if (otherPath.isRelative != this.isRelative)
                 return false;
 
-            return otherPath._components.SequenceEqual (this._components);
+            return otherPath.components.SequenceEqual (this.components);
         }
 
         public override int GetHashCode ()
@@ -268,8 +258,6 @@ namespace Ink.Runtime
             // TODO: Better way to make a hash code!
             return this.ToString ().GetHashCode ();
         }
-
-		List<Component> _components;
 	}
 }
 

@@ -139,11 +139,6 @@ namespace Ink.Runtime
             return GetVariableWithName (name, -1);
         }
 
-		internal bool GlobalVariableExistsWithName(string name)
-		{
-			return _globalVariables.ContainsKey(name);
-		}
-
         Runtime.Object GetVariableWithName(string name, int contextIndex)
         {
             Runtime.Object varValue = GetRawVariableWithName (name, contextIndex);

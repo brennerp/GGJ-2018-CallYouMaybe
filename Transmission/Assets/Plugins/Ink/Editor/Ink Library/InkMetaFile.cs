@@ -5,7 +5,15 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Debug = UnityEngine.Debug;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+
+using Object = UnityEngine.Object;
 
 namespace Ink.UnityIntegration {
 	// Information about the current state of an ink file
@@ -59,14 +67,10 @@ namespace Ink.UnityIntegration {
 
 		public bool requiresCompile {
 			get {
-				if(masterInkFileIncludingSelf.jsonAsset == null || masterInkFileIncludingSelf.metaInfo == null) 
+				if(masterInkFileIncludingSelf.jsonAsset == null) 
 					return true;
 
-				var inkFilesInIncludeHierarchy = masterInkFileIncludingSelf.metaInfo.inkFilesInIncludeHierarchy;
-				if (inkFilesInIncludeHierarchy == null)
-					return true;
-				
-				foreach(InkFile inkFile in inkFilesInIncludeHierarchy) {
+				foreach(InkFile inkFile in masterInkFileIncludingSelf.metaInfo.inkFilesInIncludeHierarchy) {
 					if(inkFile.metaInfo.hasCompileErrors) {
 						return true;
 					} else if(inkFile.metaInfo.hasErrors) {
@@ -87,7 +91,7 @@ namespace Ink.UnityIntegration {
 		/// <value>The last compile date of the story.</value>
 		public DateTime lastCompileDate {
 			get {
-				string fullJSONFilePath = InkEditorUtils.UnityRelativeToAbsolutePath(AssetDatabase.GetAssetPath(masterInkFileIncludingSelf.jsonAsset));
+				string fullJSONFilePath = InkEditorUtils.CombinePaths(Application.dataPath, AssetDatabase.GetAssetPath(masterInkFileIncludingSelf.jsonAsset).Substring(7));
 				return File.GetLastWriteTime(fullJSONFilePath);
 			}
 		}
@@ -183,8 +187,6 @@ namespace Ink.UnityIntegration {
 				List<InkFile> _includesInkFiles = new List<InkFile>();
 				_includesInkFiles.Add(inkFile);
 				foreach(var child in includesInkFiles) {
-					if (child.metaInfo == null)
-						return null;
 					_includesInkFiles.AddRange(child.metaInfo.inkFilesInIncludeHierarchy);
 				}
 				return _includesInkFiles;
