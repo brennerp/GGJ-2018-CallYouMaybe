@@ -16,6 +16,8 @@ public class Game : MonoBehaviour {
 	public bool testStory;
 	public bool bindFunction;
 
+	public CharacterManager characterManager;
+
 	public DialogDisplay dialogDisplay;
 	public ChoiceGroup choiceGroup;
 

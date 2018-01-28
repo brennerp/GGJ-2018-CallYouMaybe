@@ -9,7 +9,7 @@ public class ChoiceGroup : MonoBehaviour {
 	private int choicesCheckedOut = 0;
 	private bool choiceMade = false;
 
-	public float fadeTime;
+	public float fadeTime = 0.3f;
 	public ChoiceButton choicePrefab;
 
 	//First we add each choice to the ChoiceGroup
