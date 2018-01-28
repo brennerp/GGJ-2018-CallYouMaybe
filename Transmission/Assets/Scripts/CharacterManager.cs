@@ -11,22 +11,28 @@ public class CharacterManager : MonoBehaviour {
 	public CharacterPanel secondCharacterPanel;
 
 	public CellPhone phone;
+	private string currentPhoneOwner = "";
 
-	public void TransitionCharacters () {
-		CharacterPanel temp = currentCharacterPanel;
-		currentCharacterPanel = secondCharacterPanel;
-		secondCharacterPanel = temp;
-
-		currentCharacterPanel.gameObject.name = "Panel - Current Character";
-		secondCharacterPanel.gameObject.name = "Panel - Second Character";
+	public void TurnPhoneOn () {
+		Debug.Log ("Turning phone for " + currentPhoneOwner);
+		phone.AddContactsOfPerson (currentPhoneOwner);
 	}
 
 	public void SetMainCharacter (string character) {
+		currentPhoneOwner = character;
 		currentCharacterPanel.FillCharacter (character);
 	}
 
 	public void SetSecondCharacter (string character) {
 		secondCharacterPanel.FillCharacter (character);
+	}
+
+	public void MakeSecondMain () {
+		SetMainCharacter (secondCharacterPanel.characterName);
+	}
+
+	public void EraseSecondCharacter () {
+		secondCharacterPanel.Clear ();
 	}
 
 	public void MakeAllTalk () {
@@ -35,8 +41,9 @@ public class CharacterManager : MonoBehaviour {
 	}
 
 	public void MakeCharacterTalk (CharacterPosition pos) {
-		MakeAllShutUp ();
-		if (pos == CharacterPosition.Left) {
+		if (pos == CharacterPosition.None) {
+			return;
+		} else if (pos == CharacterPosition.Left) {
 			currentCharacterPanel.Talk ();
 		} else {
 			secondCharacterPanel.Talk ();
@@ -56,8 +63,7 @@ public class CharacterManager : MonoBehaviour {
 		}
 	}
 
-	public void EnterConversationWith (string character) {
-		SetSecondCharacter (character);
+	public void EnterConversation () {
 		animator.SetTrigger ("Enter Conversation");
 	}
 
@@ -67,5 +73,13 @@ public class CharacterManager : MonoBehaviour {
 
 	public void FailConversation () {
 		animator.SetTrigger ("Failure");
+	}
+
+	public void StartCutscene () {
+		animator.SetTrigger ("Cutscene");
+	}
+
+	public void NextAction () {
+		Game.instance.NextAction ();
 	}
 }

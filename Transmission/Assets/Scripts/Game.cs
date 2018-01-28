@@ -1,11 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Ink.Runtime;
+
 
 public enum CharacterPosition {
 	Left,
-	Right
+	Right,
+	None
 };
 
 public class Game : MonoBehaviour {
@@ -13,19 +16,22 @@ public class Game : MonoBehaviour {
 	public static Game instance;
 
 	public TextAsset testAsset;
+
 	public bool testStory;
 	public bool bindFunction;
+	public bool startWithCutscene;
 
 	public CharacterManager characterManager;
 
 	public DialogDisplay dialogDisplay;
 	public ChoiceGroup choiceGroup;
 
-	public string currentCharacterName = "First";
+	public string currentMainCharacter = "First";
 	public string currentSecondCharacter = "";
 
 	private bool isOnCall;
 	private bool hasMadeChoice;
+	private bool nextAction = false;
 	private bool displayCheckedOut = false;
 	private bool choicesCheckedOut = false;
 
@@ -45,7 +51,10 @@ public class Game : MonoBehaviour {
 
 		if (testStory) {
 			SignInStory (testAsset);
-			StartStory ();
+			StartCoroutine (PlayStory ());
+		} else if (startWithCutscene) {
+			characterManager.StartCutscene ();
+			StartConversation ();
 		}
 	}
 
@@ -53,12 +62,21 @@ public class Game : MonoBehaviour {
 		if (isOnCall) {
 			Debug.Log ("ERROR in Game > CallCharacter: player supposed to be on call.");
 		}
+
 		currentSecondCharacter = character;
+		StartConversation ();
 	}
 
 	public void StartConversation () {
-		string conversationFile = currentCharacterName + "_" + currentSecondCharacter + ".txt";
-		TextAsset inkAsset = (TextAsset)Resources.Load (conversationFile);
+		string conversationFile = "En_";
+
+		if (startWithCutscene) {
+			conversationFile += "OpeningScene";
+		} else {
+			conversationFile += currentMainCharacter;
+		}
+		Debug.Log ("Opening " + conversationFile);
+		TextAsset inkAsset = (TextAsset)Resources.Load ("Ink/" + conversationFile);
 		SignInStory (inkAsset);
 		StartCoroutine (PlayStory());
 	}
@@ -70,44 +88,91 @@ public class Game : MonoBehaviour {
 		}
 	}
 
-	public void StartStory () {
-		StartCoroutine (PlayStory ());
-	}
-
 	public IEnumerator PlayStory () {
 
-		string characterSpeaking = "";
-		string currentLine = "";
-		CharacterPosition characterPosition = CharacterPosition.Left;
+		characterManager.SetMainCharacter (currentMainCharacter);
+		characterManager.SetSecondCharacter (currentSecondCharacter);
 
-		while (CurrentStory.canContinue) {
-			hasMadeChoice = false;
-			string input = CurrentStory.Continue ();
-			string[] divisions = input.Split (':');
-
-			if (divisions.Length >= 2) {
-				characterSpeaking = divisions [0];
-			}
-
-			currentLine = divisions [divisions.Length - 1];
-
-			if (characterSpeaking == "" || characterSpeaking == currentCharacterName) {
-				characterPosition = CharacterPosition.Left;
-			} else {
-				characterPosition = CharacterPosition.Right;
-			}
-
-			dialogDisplay.SetText (currentLine);
-
-			dialogDisplay.StartFadeIn (characterPosition);
-
-			while (!displayCheckedOut) {
+		if (!startWithCutscene) {
+			characterManager.EnterConversation ();
+			while (!nextAction) {
 				yield return null;
 			}
 
-			displayCheckedOut = false;
+			nextAction = false;
+		}
 
-			if (!CurrentStory.canContinue) {
+		string characterSpeaking = "";
+		string currentLine = "";
+
+		bool forceEnd = false;
+
+		bool success = false;
+		bool failure = false;
+
+		CharacterPosition characterPosition = CharacterPosition.Left;
+
+		while (CurrentStory.canContinue && !forceEnd) {
+			hasMadeChoice = false;
+			string input = CurrentStory.Continue ();
+
+			if (!input.IsBlank ()) {
+				string[] divisions = input.Split (':');
+
+				if (divisions.Length >= 2) {
+					string nextCharacter = divisions [0].Trim();
+					if (nextCharacter == "Granny") {
+						nextCharacter = "OldLady";
+					}
+
+					if (nextCharacter != characterSpeaking) {
+						characterManager.MakeCharacterShutUp (characterPosition);
+						characterSpeaking = nextCharacter;
+					}
+
+				}
+
+				currentLine = divisions [divisions.Length - 1];
+
+				if (characterSpeaking == currentSecondCharacter) {
+					characterPosition = CharacterPosition.Right;
+				} else if (characterSpeaking == currentMainCharacter){
+					characterPosition = CharacterPosition.Left;
+				} else {
+					characterPosition = CharacterPosition.None;
+				}
+
+				characterManager.MakeCharacterTalk (characterPosition);
+
+				dialogDisplay.SetText (currentLine);
+				dialogDisplay.StartFadeIn (characterPosition);
+
+				while (!displayCheckedOut) {
+					yield return null;
+				}
+
+				displayCheckedOut = false;
+
+			}
+
+			List<string> tags = CurrentStory.currentTags;
+			foreach (string tag in tags) {
+				if (tag.Contains("Success")) {
+					Debug.Log ("SUCCESS BABY");
+					success = true;
+					forceEnd = true;
+					break;
+				} else if (tag.Contains("Failure")) {
+					failure = true;
+					forceEnd = true;
+					break;
+				}
+			}
+
+			if (!CurrentStory.canContinue && !forceEnd) {
+
+				characterManager.MakeCharacterShutUp (characterPosition);
+
 				if (CurrentStory.currentChoices.Count > 0) {
 
 					foreach (Choice choice in CurrentStory.currentChoices) {
@@ -126,6 +191,45 @@ public class Game : MonoBehaviour {
 
 			yield return null;
 		}
+
+		characterManager.MakeAllShutUp ();
+
+		if (success) {
+			Debug.Log ("AAAAAAA");
+
+
+
+
+			characterManager.SucceedConversation ();
+
+			while (!nextAction) {
+				yield return null;
+			}
+
+			nextAction = false;
+
+			if (startWithCutscene) {
+				startWithCutscene = false;
+				characterManager.EraseSecondCharacter ();
+			} else {
+				currentMainCharacter = currentSecondCharacter;
+			}
+
+			currentSecondCharacter = "";
+
+		} else if (failure) {
+			characterManager.FailConversation ();
+
+			while (!nextAction) {
+				yield return null;
+			}
+
+			nextAction = false;
+
+			SceneManager.LoadScene (SceneManager.GetActiveScene ().buildIndex);
+		} else {
+			currentSecondCharacter = "";
+		}
 			
 	}
 
@@ -143,7 +247,11 @@ public class Game : MonoBehaviour {
 	}
 
 	private void BindFunction () {
-		CurrentStory.BindExternalFunction ("who_is_being_called", () => {return "sarue";});
+		CurrentStory.BindExternalFunction ("who_is_being_called", () => {return currentSecondCharacter;});
+	}
+
+	public void NextAction () {
+		nextAction = true;
 	}
 
 

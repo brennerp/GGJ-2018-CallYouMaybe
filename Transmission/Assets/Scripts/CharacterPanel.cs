@@ -4,21 +4,22 @@ using UnityEngine;
 
 public class CharacterPanel : MonoBehaviour {
 
-	private Animator currentCharacter;
+	public Animator currentCharacter;
+	public string characterName;
 
 	public void FillCharacter (string character) {
 		Clear ();
-		currentCharacter = (Animator)Resources.Load ("Prefabs/Characters/" + character);
-		currentCharacter.transform.parent = transform;
+		characterName = character;
+		//Debug.Log ("Looking for " + character);
+		currentCharacter = (Instantiate(Resources.Load ("Prefabs/Characters/" + character) , transform) as GameObject).GetComponent<Animator>();
+		//Debug.Log ("Found " + currentCharacter.name);
 	}
 
 	public void Clear () {
-		if (currentCharacter == null) {
-			Debug.Log ("Character is null!");
-			return;
+		characterName = "";
+		if (currentCharacter != null) {
+			Destroy (currentCharacter.gameObject);
 		}
-
-		Destroy (currentCharacter.gameObject);
 	}
 
 	public void Talk () {

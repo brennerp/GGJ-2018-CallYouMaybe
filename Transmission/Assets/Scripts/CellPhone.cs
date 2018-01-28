@@ -11,6 +11,7 @@ public class CellPhone : MonoBehaviour {
 	};
 
 	private List<CellContact> currentContacts = new List<CellContact>();
+	//private List<string> currentIgnoredContacts = new List<string> ();
 	private bool contactChosen = false;
 
 	public float fadeTime = 0.25f;
@@ -23,31 +24,54 @@ public class CellPhone : MonoBehaviour {
 	}
 
 	public void AddContactsOfPerson (string person) {
+		Debug.Log ("Adding Contacts");
+
 		if (!personalContacts.ContainsKey (person)) {
 			Debug.Log ("ERROR in CellPhone: There is no contact list for requested person: " + person);
 			return;
 		}
+		string array = personalContacts [person];
 
-		Debug.Log ("FOUND CONTACT LIST OF PERSON!");
-		string[] contacts = personalContacts [person].Split (',');
+		Debug.Log ("FOUND CONTACT LIST OF PERSON: " + array);
+		string[] contacts = array.Split (',');
 
 		foreach (string contact in contacts) {
-			AddContact (contact);
+			//if (!currentIgnoredContacts.Contains (contact)) {
+				AddContact (contact.Trim());
+			//}
 		}
 
-		FadeIn ();
+		//if (currentContacts.Count <= 0) {
+			//GAME OVER
+		//} else {]
+			FadeIn ();
+		//}
+
+	}
+
+	/*public void IgnoreContact (string contact) {
+		currentIgnoredContacts.Add (contact);
+	}*/
+
+	public void Clear () {
+		foreach (CellContact contact in currentContacts) {
+			Destroy (contact.gameObject);
+		}
+		currentContacts.Clear ();
 	}
 
 	public void AddContact (string contact) {
+		Debug.Log ("Creating new Contact Button!");
 		CellContact newContact = (CellContact)Instantiate (contactPrefab, screenGroup.transform);
-		newContact.contactName.text = contact.Trim();
-		newContact.button.onClick.AddListener (() => this.ChooseContact(contact.Trim()));
+		newContact.contactName.text = contact;
+		newContact.button.onClick.AddListener (() => this.ChooseContact(contact));
 		currentContacts.Add (newContact);
 	}
 
 	public void ChooseContact (string contact) {
 		screenGroup.interactable = false;
 		FadeOut ();
+		Game.instance.CallCharacter (contact);
 	}
 
 	public void FadeIn () {
@@ -81,6 +105,6 @@ public class CellPhone : MonoBehaviour {
 		}
 
 		screenGroup.alpha = 0f;
-
+		Clear ();
 	}
 }

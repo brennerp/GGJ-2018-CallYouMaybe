@@ -29,10 +29,11 @@ public class DialogDisplay : MonoBehaviour {
 
 	public void StartFadeIn (CharacterPosition characterPosition) {
 		if (characterPosition == CharacterPosition.Right) {
-			balloonAnimator.SetTrigger ("Right");
+			balloonAnimator.SetInteger ("Direction", 1);
 		} else {
-			balloonAnimator.SetTrigger ("Left");
+			balloonAnimator.SetInteger ("Direction", -1);
 		}
+
 		StartCoroutine (FadeIn (fadeTime));
 	}
 
