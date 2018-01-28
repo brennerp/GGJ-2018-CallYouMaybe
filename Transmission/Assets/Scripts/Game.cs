@@ -195,10 +195,6 @@ public class Game : MonoBehaviour {
 		characterManager.MakeAllShutUp ();
 
 		if (success) {
-			Debug.Log ("AAAAAAA");
-
-
-
 
 			characterManager.SucceedConversation ();
 

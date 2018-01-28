@@ -53,7 +53,7 @@ public class ChoiceButton : MonoBehaviour {
 	private IEnumerator FadeIn (float time) {
 		float i = 0f;
 		while (i < time) {
-			canvasGroup.alpha = Mathf.Lerp (canvasGroup.alpha, 1f, i);
+			canvasGroup.alpha = Mathf.Lerp (canvasGroup.alpha, 1f, i / time);
 			i += Time.deltaTime;
 			yield return new WaitForEndOfFrame ();
 		}
@@ -64,7 +64,7 @@ public class ChoiceButton : MonoBehaviour {
 		float i = 0f;
 		canvasGroup.interactable = false;
 		while (i < time) {
-			canvasGroup.alpha = Mathf.Lerp (canvasGroup.alpha, 0f, i);
+			canvasGroup.alpha = Mathf.Lerp (canvasGroup.alpha, 0f, i / time);
 			i += Time.deltaTime;
 			yield return new WaitForEndOfFrame ();
 		}
